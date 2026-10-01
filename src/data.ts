@@ -57,6 +57,7 @@ const project: ChecklistProject = {
   status: 'draft',
   updatedAt: '2026-09-25T00:12:00.000Z',
   reviewNote: '',
+  baseRevisionId: 'revision-2',
   stages: structuredClone(stages),
   items: structuredClone(items),
   revisions: [
@@ -82,7 +83,9 @@ const project: ChecklistProject = {
 };
 
 export const createInitialState = (): WorkspaceState => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   selectedProjectId: project.id,
-  projects: [project]
+  projects: [project],
+  mergeSessions: [],
+  activeMergeSessionId: null
 });

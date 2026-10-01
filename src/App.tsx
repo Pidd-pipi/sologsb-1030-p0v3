@@ -22,6 +22,8 @@ import {
   Tooltip
 } from '@radix-ui/themes';
 import { buildVersionOptions, diffVersions } from './diff';
+import { FIELD_LABEL } from './merge';
+import { MergeTab } from './MergeTab';
 import { useChecklistStore } from './store';
 import type { ChecklistItem, ChecklistProject, IssueLevel, ValidationIssue, WorkflowStatus } from './types';
 import { validateProject } from './validation';
@@ -248,6 +250,7 @@ function App() {
           <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
             <Tabs.List className="main-tabs">
               <Tabs.Trigger value="editor">编辑清单</Tabs.Trigger>
+              <Tabs.Trigger value="handoff">离线交接{store.state.mergeSessions.some((session) => session.projectId === project.id && session.status === 'open') ? <Badge color="red" variant="solid" ml="1">●</Badge> : null}</Tabs.Trigger>
               <Tabs.Trigger value="versions">版本差异 <Badge size="1" variant="soft">{project.revisions.length}</Badge></Tabs.Trigger>
               <Tabs.Trigger value="print">打印预览</Tabs.Trigger>
             </Tabs.List>
@@ -286,6 +289,7 @@ function App() {
                     <Badge color={project.status === 'draft' ? 'gray' : project.status === 'review' ? 'amber' : 'green'}>{statusMeta[project.status].label}</Badge>
                   </div>
                   {project.status !== 'draft' && <Callout.Root color={project.status === 'review' ? 'amber' : 'green'} mb="4"><Callout.Text>{statusMeta[project.status].description} 当前内容不能直接编辑。</Callout.Text></Callout.Root>}
+                  {project.mergeInfo && <Callout.Root color="blue" mb="4"><Callout.Text>离线交接合并：机长“{project.mergeInfo.captainLabel || '—'}” × 副驾驶“{project.mergeInfo.firstOfficerLabel || '—'}”，底本 r{project.mergeInfo.baseRevisionNumber}；新增 {project.mergeInfo.addedCount} · 删除 {project.mergeInfo.removedCount} · 自动并入 {project.mergeInfo.autoChangeCount} · 复核人选定 {project.mergeInfo.resolvedConflictCount} 项。</Callout.Text></Callout.Root>}
 
                   <div className="quick-entry">
                     <Select.Root value={quickStageId || undefined} onValueChange={setQuickStageId} disabled={project.status !== 'draft'}>
@@ -333,6 +337,7 @@ function App() {
                                     <strong>{item.challenge || '未命名检查项'}</strong>
                                     {item.critical && <Badge color="red" size="1">关键</Badge>}
                                     {item.preconditionIds.length > 0 && <Badge color="blue" size="1">{item.preconditionIds.length} 前置</Badge>}
+                                    <ProvenanceRowBadges item={item} />
                                     {itemIssues.length > 0 && <Badge color={itemIssues.some((issue) => issue.level === 'error') ? 'red' : 'amber'} size="1">{itemIssues.length} 问题</Badge>}
                                   </Flex>
                                   <span className={`response-preview ${!item.response ? 'missing' : ''}`}>{item.response || '缺少预期回应'}</span>
@@ -409,6 +414,10 @@ function App() {
               </div>
             </Tabs.Content>
 
+            <Tabs.Content value="handoff">
+              <MergeTab project={project} store={store} onApplied={() => setActiveTab('editor')} />
+            </Tabs.Content>
+
             <Tabs.Content value="versions">
               <div className="content-page">
                 <Heading size="7">版本差异</Heading>
@@ -479,6 +488,23 @@ function App() {
         </Dialog.Content>
       </Dialog.Root>
     </Theme>
+  );
+}
+
+function ProvenanceRowBadges({ item }: { item: ChecklistItem }) {
+  const provenance = item.provenance ?? {};
+  const fields = Object.keys(provenance) as Array<keyof typeof provenance>;
+  return (
+    <>
+      {fields.flatMap((field) => {
+        const source = provenance[field];
+        if (!source || source === 'both') return [];
+        const label = FIELD_LABEL[field as keyof typeof FIELD_LABEL] ?? String(field);
+        const color = source === 'captain' ? 'blue' : source === 'firstOfficer' ? 'cyan' : 'amber';
+        const tag = source === 'captain' ? '机' : source === 'firstOfficer' ? '副' : '复';
+        return [<Tooltip key={String(field)} content={`${label} 来自${source === 'captain' ? '机长平板' : source === 'firstOfficer' ? '副驾驶平板' : '复核人定稿'}`}><Badge color={color} size="1" variant="soft">{label}·{tag}</Badge></Tooltip>];
+      })}
+    </>
   );
 }
 

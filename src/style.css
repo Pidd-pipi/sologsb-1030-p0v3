@@ -132,3 +132,41 @@ kbd { border: 1px solid var(--gray-a7); border-bottom-width: 2px; border-radius:
   .content-page { max-width: none; padding: 0; }
   .print-sheet { border: 0; box-shadow: none; border-radius: 0; padding: 0; }
 }
+
+/* —— 离线交接合并 —— */
+.merge-page { max-width: 1240px; }
+.handoff-card { align-self: start; }
+.merge-field { display: grid; gap: 6px; margin-top: 12px; }
+.merge-field > span { font-size: 12px; font-weight: 700; }
+.merge-file { display: none; }
+.merge-summary-card { background: var(--accent-a2); }
+.session-panel { margin-top: 4px; }
+.session-head-card { background: var(--accent-a2); }
+.summary-stat { min-width: 108px; display: grid; gap: 4px; padding: 10px 14px; }
+.conflict-list, .auto-list, .session-list, .issue-merge-list { display: grid; gap: 10px; padding: 2px; }
+.conflict-card { border-left: 4px solid var(--amber-8); }
+.conflict-card.resolved { border-left-color: var(--green-8); opacity: .92; }
+.conflict-card.nonblocking { border-left-color: var(--blue-8); }
+.conflict-body { margin-top: 10px; }
+.value-box { border: 1px solid var(--gray-a5); border-radius: 10px; padding: 8px 10px; background: var(--gray-a2); min-width: 0; }
+.value-box.source-captain { background: color-mix(in srgb, var(--blue-3) 45%, var(--color-panel)); }
+.value-box.source-fo { background: color-mix(in srgb, var(--cyan-3) 45%, var(--color-panel)); }
+.value-box.picked { outline: 2px solid var(--accent-9); outline-offset: 1px; }
+.value-box pre { margin: 5px 0 0; white-space: pre-wrap; word-break: break-word; font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.custom-text { display: grid; gap: 6px; min-width: 260px; flex: 1; }
+.custom-text > span { font-size: 12px; font-weight: 700; }
+.custom-preconditions { border-top: 1px dashed var(--gray-a6); padding-top: 8px; }
+.custom-precondition-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 2px 12px; margin-top: 6px; max-height: 180px; overflow: auto; }
+.auto-card { border-left: 3px solid var(--green-8); }
+.session-card { border-left: 4px solid var(--accent-a7); }
+.candidate-preview section { padding: 8px 0; border-bottom: 1px dashed var(--gray-a5); }
+.candidate-row { border-bottom: 1px solid transparent; }
+.candidate-row:hover { background: var(--gray-a2); border-radius: 6px; }
+.issue-merge-card { border-left-width: 4px; }
+.issue-merge-card.error { border-left-color: var(--red-9); }
+.issue-merge-card.warning { border-left-color: var(--amber-9); }
+.issue-merge-card.info { border-left-color: var(--blue-9); }
+.merge-page .rt-TabsContent { padding-top: 4px; }
+@media print {
+  .merge-page { display: none !important; }
+}
