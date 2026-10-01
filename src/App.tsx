@@ -22,6 +22,7 @@ import {
   Tooltip
 } from '@radix-ui/themes';
 import { buildVersionOptions, diffVersions } from './diff';
+import HandoverTab from './HandoverTab';
 import { useChecklistStore } from './store';
 import type { ChecklistItem, ChecklistProject, IssueLevel, ValidationIssue, WorkflowStatus } from './types';
 import { validateProject } from './validation';
@@ -249,6 +250,12 @@ function App() {
             <Tabs.List className="main-tabs">
               <Tabs.Trigger value="editor">编辑清单</Tabs.Trigger>
               <Tabs.Trigger value="versions">版本差异 <Badge size="1" variant="soft">{project.revisions.length}</Badge></Tabs.Trigger>
+              <Tabs.Trigger value="handover">
+                交接合并
+                {store.activeHandover?.status === 'in-progress' && (
+                  <Badge size="1" color="amber" variant="soft">进行中</Badge>
+                )}
+              </Tabs.Trigger>
               <Tabs.Trigger value="print">打印预览</Tabs.Trigger>
             </Tabs.List>
 
@@ -430,6 +437,21 @@ function App() {
                   )) : <div className="empty-page"><strong>两个版本没有差异</strong><span>选择不同版本后可查看新增、删除和修改的检查项。</span></div>}
                 </div>
               </div>
+            </Tabs.Content>
+
+            <Tabs.Content value="handover">
+              <HandoverTab
+                project={project}
+                session={store.activeHandover}
+                onStart={store.startHandover}
+                onImport={store.setHandoverSide}
+                onUseCurrent={store.useCurrentAsHandoverSide}
+                onResolveConflict={store.resolveHandoverConflict}
+                onResolveItem={store.resolveHandoverItem}
+                onApply={store.applyHandover}
+                onDiscard={store.discardHandover}
+                onCreateTabletProject={store.createTabletProject}
+              />
             </Tabs.Content>
 
             <Tabs.Content value="print">

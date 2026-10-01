@@ -121,6 +121,37 @@ kbd { border: 1px solid var(--gray-a7); border-bottom-width: 2px; border-radius:
 .help-list div { display: grid; grid-template-columns: 150px 1fr; align-items: center; gap: 12px; font-size: 12px; }
 .help-list kbd { justify-self: start; }
 
+/* ---------- 离线交接合并 ---------- */
+.handover-page { max-width: 1180px; }
+.handover-start-card { display: grid; gap: 4px; padding: 18px; }
+.handover-step { display: flex; align-items: flex-start; gap: 13px; }
+.handover-step .rt-Badge { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; margin-top: 2px; }
+.dialog-form { display: grid; gap: 13px; margin-top: 16px; }
+.dialog-form label { display: grid; gap: 6px; }
+.dialog-form label > span { font-size: 12px; font-weight: 700; }
+.side-card { padding: 15px; }
+.side-meta { display: grid; gap: 5px; }
+.merge-section { padding: 15px; margin-bottom: 12px; }
+.merge-section > .rt-Flex:first-child { margin-bottom: 8px; }
+.conflict-card { padding: 13px; margin-bottom: 9px; border-left: 3px solid var(--amber-9); }
+.conflict-option {
+  display: block; width: 100%; text-align: left; border: 1px solid var(--gray-a6); border-radius: 11px;
+  padding: 10px; background: var(--color-panel); color: var(--gray-12); cursor: pointer; transition: border-color .14s ease, background .14s ease;
+}
+.conflict-option:hover { border-color: var(--accent-a8); background: var(--accent-a2); }
+.conflict-option.selected { border-color: var(--green-9); background: var(--green-a2); box-shadow: inset 3px 0 0 var(--green-9); }
+.conflict-sequence { display: block; font-size: 11px; line-height: 1.5; color: var(--gray-11); }
+.conflict-value {
+  display: block; margin-top: 2px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px; white-space: pre-wrap; word-break: break-word;
+}
+.unresolved-card { padding: 13px; margin-bottom: 9px; border-left: 3px solid var(--red-9); }
+.unresolved-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; }
+.clean-list { display: grid; gap: 5px; }
+.clean-row { display: flex; align-items: center; gap: 9px; padding: 5px 8px; border-radius: 8px; }
+.clean-row:hover { background: var(--gray-a2); }
+.merge-footer { position: sticky; bottom: 10px; padding: 13px 15px; border: 1px solid var(--gray-a6); box-shadow: var(--shadow-3); }
+
 @media (max-width: 1320px) {
   .editor-grid { grid-template-columns: 210px minmax(570px, 1fr) 315px; }
   .workflow-step { min-width: 160px; }

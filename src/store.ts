@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createInitialState } from './data';
-import type { ChecklistItem, ChecklistProject, ChecklistRevision, FlightStage, WorkspaceState } from './types';
+import { computeMerge } from './handover';
+import type { ChecklistItem, ChecklistProject, ChecklistRevision, FlightStage, HandoverPackage, HandoverSide, MergeSession, WorkspaceState } from './types';
 
 const STORAGE_KEY = 'sologsb-1030-workspace-v1';
 const clone = <T>(value: T): T => structuredClone(value);
@@ -11,8 +12,15 @@ function loadState(): WorkspaceState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      const parsed = JSON.parse(saved) as WorkspaceState;
-      if (parsed.schemaVersion === 1 && parsed.projects?.length) return parsed;
+      const parsed: { schemaVersion?: number } & Partial<Omit<WorkspaceState, 'schemaVersion'>> = JSON.parse(saved);
+      // 旧草稿升级：v1 → v2 仅新增交接会话存储，原有项目与冻结版本不变
+      if (parsed.schemaVersion === 1) {
+        parsed.schemaVersion = 2;
+        parsed.handoverSessions = {};
+      }
+      if (parsed.schemaVersion === 2 && Array.isArray(parsed.projects) && parsed.projects.length) {
+        return parsed as WorkspaceState;
+      }
     }
   } catch {
     // Corrupted local draft falls back to the bundled operational checklist.
@@ -241,9 +249,150 @@ export function useChecklistStore() {
     setState((current) => updateSelected(current, () => undefined));
   }, [state]);
 
+  // ---------- 离线交接合并 ----------
+
+  const startHandover = useCallback((baseRevisionId: string) => {
+    setState((current) => {
+      const next = clone(current);
+      const project = next.projects.find((entry) => entry.id === next.selectedProjectId);
+      const base = project?.revisions.find((entry) => entry.id === baseRevisionId);
+      if (!project || !base) return current;
+      next.handoverSessions[project.id] = {
+        id: uid('merge'),
+        projectId: project.id,
+        startedAt: now(),
+        updatedAt: now(),
+        baseRevision: base.revision,
+        baseSnapshot: { stages: clone(base.stages), items: clone(base.items) },
+        captain: null,
+        firstOfficer: null,
+        decisions: {},
+        unresolvedActions: {},
+        status: 'in-progress'
+      };
+      return next;
+    });
+  }, []);
+
+  const setHandoverSide = useCallback((side: HandoverSide, pkg: HandoverPackage) => {
+    setState((current) => {
+      const next = clone(current);
+      const session = next.handoverSessions[next.selectedProjectId];
+      if (!session) return current;
+      if (side === 'captain') session.captain = pkg;
+      else session.firstOfficer = pkg;
+      session.updatedAt = now();
+      return next;
+    });
+  }, []);
+
+  const useCurrentAsHandoverSide = useCallback((side: HandoverSide, author: string) => {
+    setState((current) => {
+      const next = clone(current);
+      const project = next.projects.find((entry) => entry.id === next.selectedProjectId);
+      const session = next.handoverSessions[next.selectedProjectId];
+      if (!project || !session) return current;
+      session[side === 'captain' ? 'captain' : 'firstOfficer'] = {
+        schemaVersion: 2,
+        kind: 'flightline-handover',
+        projectId: project.id,
+        projectName: project.name,
+        baseRevision: session.baseRevision,
+        baseSnapshot: clone(session.baseSnapshot),
+        side,
+        author: author.trim() || (side === 'captain' ? '机长' : '副驾驶'),
+        exportedAt: now(),
+        stages: clone(project.stages),
+        items: clone(project.items)
+      };
+      session.updatedAt = now();
+      return next;
+    });
+  }, []);
+
+  const resolveHandoverConflict = useCallback((conflictId: string, side: HandoverSide) => {
+    setState((current) => {
+      const next = clone(current);
+      const session = next.handoverSessions[next.selectedProjectId];
+      if (!session) return current;
+      session.decisions[conflictId] = side;
+      session.updatedAt = now();
+      return next;
+    });
+  }, []);
+
+  const resolveHandoverItem = useCallback((itemId: string, action: MergeSession['unresolvedActions'][string]) => {
+    setState((current) => {
+      const next = clone(current);
+      const session = next.handoverSessions[next.selectedProjectId];
+      if (!session) return current;
+      session.unresolvedActions[itemId] = action;
+      session.updatedAt = now();
+      return next;
+    });
+  }, []);
+
+  const applyHandover = useCallback(() => {
+    setState((current) => {
+      const next = clone(current);
+      const project = next.projects.find((entry) => entry.id === next.selectedProjectId);
+      const session = next.handoverSessions[next.selectedProjectId];
+      if (!project || !session) return current;
+      const result = computeMerge(session, project);
+      if (result.conflicts.length > 0 || result.unresolved.length > 0) return current;
+      past.current = [...past.current.slice(-39), clone(current)];
+      future.current = [];
+      forceHistoryState((value) => value + 1);
+      project.stages = result.stages;
+      project.items = result.items;
+      project.revision += 1;
+      project.status = 'draft';
+      project.reviewNote = '';
+      project.updatedAt = now();
+      session.status = 'applied';
+      session.updatedAt = now();
+      return next;
+    });
+  }, []);
+
+  const discardHandover = useCallback(() => {
+    setState((current) => {
+      const next = clone(current);
+      delete next.handoverSessions[next.selectedProjectId];
+      return next;
+    });
+  }, []);
+
+  const createTabletProject = useCallback((baseRevisionId: string) => {
+    setState((current) => {
+      const next = clone(current);
+      const project = next.projects.find((entry) => entry.id === next.selectedProjectId);
+      const base = project?.revisions.find((entry) => entry.id === baseRevisionId);
+      if (!project || !base) return current;
+      const id = uid('project');
+      next.projects.push({
+        id,
+        name: `${project.name} · 平板副本`,
+        aircraft: project.aircraft,
+        revision: base.revision,
+        status: 'draft',
+        updatedAt: now(),
+        reviewNote: '',
+        stages: clone(base.stages),
+        items: clone(base.items),
+        revisions: [clone(base)]
+      });
+      next.selectedProjectId = id;
+      return next;
+    });
+  }, []);
+
+  const activeHandover = state.handoverSessions[state.selectedProjectId];
+
   return {
     state,
     selectedProject,
+    activeHandover,
     canUndo: past.current.length > 0,
     canRedo: future.current.length > 0,
     selectProject,
@@ -263,6 +412,14 @@ export function useChecklistStore() {
     createRevision,
     undo,
     redo,
-    saveNow
+    saveNow,
+    startHandover,
+    setHandoverSide,
+    useCurrentAsHandoverSide,
+    resolveHandoverConflict,
+    resolveHandoverItem,
+    applyHandover,
+    discardHandover,
+    createTabletProject
   };
 }
